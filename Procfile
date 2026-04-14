@@ -1,0 +1,1 @@
+web: gunicorn MJFlex.wsgi
