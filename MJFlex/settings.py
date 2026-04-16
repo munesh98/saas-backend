@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -77,7 +78,7 @@ WSGI_APPLICATION = "MJFlex.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 #muneshJRandom@2001
-        
+'''        
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -87,6 +88,12 @@ DATABASES = {
         'HOST': 'localhost',
         'PORT': '5432',
     }
+}'''
+
+
+
+DATABASES = {
+    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
 }
 
 
