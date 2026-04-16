@@ -4,7 +4,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import SubscriptionSerializer
 from .models import Subscription
+from django.http import HttpResponse
 
+
+def home(request):
+    return HttpResponse("Backend is live 🚀")
 
 class SubscriptionCreateAPIView(APIView):
 
