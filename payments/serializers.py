@@ -19,7 +19,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             raise ValidationError("You cannot pay for another user's subscription.")
 
         # ⚠️ Optional but recommended check
-        if subscription.status != 'ACTIVE':
+        if subscription.status != 'PENDING':
             raise ValidationError("Cannot make payment for inactive subscription.")
 
         amount = subscription.plan.price

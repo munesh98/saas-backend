@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from .serializers import PaymentSerializer
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
@@ -101,10 +102,20 @@ class PaymentList(APIView):
                             }, 
                             status=status.HTTP_200_OK)
         
-        serializer = PaymentSerializer(payments, many=True)
+        serializer = PaymentSerializer(payments, many=True)#converting into json format
 
         return Response({
                         "message": "Payments fetched successfully",
                         "data": serializer.data
                         }
                         , status=status.HTTP_200_OK)
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            "id": request.user.id,
+            "username": request.user.username,
+        })

@@ -30,7 +30,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             plan=plan,
             start_date=start_date,
             end_date=end_date,
-            status='ACTIVE',
+            status='PENDING',
             auto_renew=False
         )
 
