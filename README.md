@@ -111,8 +111,8 @@ celery -A MJFlex worker --loglevel=info --pool=solo
 ---
 
 ## Environment Variables
-SECRET_KEY=your-secret-key
-DATABASE_URL=your-database-url
+SECRET_KEY=your-secret-key 
+DATABASE_URL=your-database-url 
 REDIS_URL=your-redis-url
 
 ---
