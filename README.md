@@ -1,141 +1,124 @@
-# MJFlex Subscription System
+# MJFlex — Subscription-based SaaS Backend
 
-This is a backend project built using Django and Django REST Framework that handles subscription and payment workflows similar to a SaaS product.
-
-The system allows users to subscribe to plans, make payments, and track their subscription status.
+A production-ready SaaS backend built with Django and Django REST Framework.
+Handles user authentication, subscription management, payment workflows,
+and async email notifications.
 
 ---
 
 ## Tech Stack
 
-* Python
-* Django
-* Django REST Framework
-* PostgreSQL (production)
-* SQLite (local)
-* Gunicorn
-* Render (deployment)
+- Python & Django
+- Django REST Framework
+- JWT Authentication (djangorestframework-simplejwt)
+- Celery + Redis (async task processing)
+- PostgreSQL (production) / SQLite (local)
+- Gunicorn
+- Render (deployment)
 
 ---
 
 ## Features
 
-* User authentication (basic)
-* Plan management (admin can create/update)
-* Subscription creation and tracking
-* Prevent multiple active subscriptions per user
-* Payment creation linked to subscription
-* Prevent duplicate payments
-* Status handling (PENDING, SUCCESS, FAILURE)
+- JWT authentication — register, login, token refresh
+- Plan management — admin can create and manage plans
+- Subscription creation and tracking
+- One active subscription per user enforced
+- Payment flow linked to subscription
+- Payment amount derived from plan — no client-side manipulation
+- User-level access control — users can only manage their own data
+- Duplicate payment prevention
+- Async email notifications via Celery and Redis — confirmation
+  email sent on subscription creation without blocking the API response
 
 ---
 
-## API Overview
+## API Endpoints
 
-### Plans
-
-* GET /api/plans/
-* POST /api/plans/ (admin)
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/register/ | Register new user |
+| POST | /api/token/ | Login — returns access & refresh tokens |
+| POST | /api/token/refresh/ | Refresh access token |
 
 ### Subscriptions
-
-* POST /api/subscriptions/
-* GET /api/subscriptions/
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/subscriptions/ | Create a subscription |
+| GET | /api/subscriptions/list/ | List user's subscriptions |
 
 ### Payments
-
-* POST /api/payments/
-* GET /api/payments/
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | /api/payments/ | Create a payment |
+| POST | /api/payments/verify/ | Verify and update payment status |
+| GET | /api/payments/list/ | List user's payments |
+| GET | /api/me/ | Get current user info |
 
 ---
 
-## Core Logic
+## Core Business Logic
 
-* A user can have only one active subscription at a time
-* Payment is always linked to a subscription
-* Payment amount is derived from selected plan
-* User cannot pay for another user’s subscription
-* Duplicate successful payments are prevented
+- User must register and authenticate via JWT before accessing any endpoint
+- A user can have only one active subscription at a time
+- Payment is always linked to a subscription
+- Payment amount is derived from the selected plan automatically
+- Users cannot pay for another user's subscription
+- Duplicate pending payments are prevented
+- On successful payment, subscription status updates to ACTIVE automatically
+- Subscription confirmation email is sent asynchronously via Celery + Redis
+
+---
+
+## Async Task Processing
+
+Celery and Redis handle background tasks so API responses are never blocked:
+
+- **Subscription confirmation email** — triggered automatically when a
+  subscription is created, processed in the background by the Celery worker
 
 ---
 
 ## Database Models
 
-Plan:
+**Plan** — name, code, price, duration_days, description
 
-* name
-* code
-* price
-* duration_days
-* description
+**Subscription** — user, plan, start_date, end_date, status, auto_renew
 
-Subscription:
-
-* user (FK)
-* plan (FK)
-* start_date
-* end_date
-* status
-* auto_renew
-
-Payment:
-
-* user (FK)
-* subscription (FK)
-* amount
-* status
-* transaction_id
-* created_at
+**Payment** — user, subscription, amount, status, transaction_id, created_at
 
 ---
 
 ## Running Locally
 
 ```bash
-git clone <repo-url>
-cd project-folder
-
+git clone https://github.com/munesh98/saas-backend
+cd saas-backend
 python -m venv venv
 venv\Scripts\activate
-
 pip install -r requirements.txt
-
+cp .env.example .env  # add your environment variables
 python manage.py migrate
 python manage.py runserver
 ```
 
----
-
-## Deployment
-
-The project is deployed on Render using:
-
-* Gunicorn for serving
-* PostgreSQL database
-* Environment variables for configuration
-
-Live URL:
-https://saas-backend-4nsq.onrender.com/
+Start the Celery worker (separate terminal):
+```bash
+celery -A MJFlex worker --loglevel=info --pool=solo
+```
 
 ---
 
-## Notes
-
-* Environment variables are used for SECRET_KEY and DATABASE_URL
-* Local setup uses PostgreSQL (configured manually)
-* Basic validation is handled in serializers and views
-
----
-
-## Future Improvements
-
-* JWT authentication
-* Payment gateway integration
-* Better error handling and logging
-* Rate limiting
+## Environment Variables
+SECRET_KEY=your-secret-key
+DATABASE_URL=your-database-url
+REDIS_URL=your-redis-url
 
 ---
 
 ## Author
 
 Munesh J
+[github.com/munesh98](https://github.com/munesh98) |
+[linkedin.com/in/muneshj](https://linkedin.com/in/muneshj)
