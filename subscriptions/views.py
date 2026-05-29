@@ -5,6 +5,7 @@ from rest_framework import status
 from .serializers import SubscriptionSerializer
 from .models import Subscription
 from django.http import HttpResponse
+from .tasks import send_subscription_confirmation_email
 
 
 def home(request):
@@ -20,6 +21,11 @@ class SubscriptionCreateAPIView(APIView):
 
         if serializer.is_valid():
             subscription = serializer.save()
+            send_subscription_confirmation_email.delay(user_email = request.user.email,
+                                                       username = request.user.username,
+                                                       plan_name = subscription.plan.name,
+                                                       end_date = subscription.end_date,
+                                                       )
             return Response(
                 SubscriptionSerializer(subscription).data,
                 status=status.HTTP_201_CREATED

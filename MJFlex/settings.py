@@ -16,6 +16,7 @@ import dj_database_url
 from dotenv import load_dotenv
 import os
 from datetime import timedelta
+import ssl
 
 load_dotenv()
 
@@ -156,3 +157,22 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ]
 }
+
+
+
+# Celery settings
+REDIS_URL = os.environ.get('REDIS_URL')
+CELERY_BROKER_URL = REDIS_URL  #task is stored
+CELERY_RESULT_BACKEND = REDIS_URL #completed task in stored
+CELERY_BROKER_USE_SSL = {          #ssl certification used for task data store
+    'ssl_cert_reqs': ssl.CERT_NONE
+}
+CELERY_REDIS_BACKEND_USE_SSL = {   #ssl certification used for task queue
+    'ssl_cert_reqs': ssl.CERT_NONE
+}
+
+
+
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@mjflex.com'
