@@ -1,11 +1,14 @@
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import ValidationError
 from rest_framework import status
-from .serializers import SubscriptionSerializer
-from .models import Subscription
+from .serializers import SubscriptionSerializer, PlanSerializer
+from .models import Subscription, Plan
 from django.http import HttpResponse
 from .tasks import send_subscription_confirmation_email
+from django.shortcuts import get_object_or_404
 
 
 def home(request):
@@ -47,3 +50,35 @@ class SubscriptionList(APIView):
                         "data": serializer.data
                         }, 
                         status=status.HTTP_200_OK)
+                        
+ 
+
+class PlanList(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self,request):
+        plans = Plan.objects.all()
+        serializer = PlanSerializer(plans, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class SubscriptionCancelAPIView(APIView):
+
+    def patch(self, request, subscription_id):
+        subscription = get_object_or_404(Subscription, id=subscription_id)
+
+        if subscription.user != request.user:
+            raise ValidationError("You are not authorized to cancel this subscription.")
+
+        if subscription.status != "ACTIVE":
+            raise ValidationError("No active subscription found to cancel.")
+
+        subscription.is_cancelled = True
+        subscription.auto_renew = False
+        subscription.save()
+
+        return Response(
+            {"message": "Subscription cancelled successfully. You will have access until your billing period ends."},
+            status=status.HTTP_200_OK
+        )

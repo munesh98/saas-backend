@@ -6,4 +6,5 @@ urlpatterns = [
     path('payments/verify/', PaymentVerifyAPIView.as_view()),
     path('payments/list/', PaymentList.as_view()),
     path('me/', MeView.as_view()),
+    
 ]
