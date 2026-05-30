@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "subscriptions",
     "payments",
     'rest_framework',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -170,6 +171,26 @@ CELERY_BROKER_USE_SSL = {          #ssl certification used for task data store
 CELERY_REDIS_BACKEND_USE_SSL = {   #ssl certification used for task queue
     'ssl_cert_reqs': ssl.CERT_NONE
 }
+
+
+#CELERY BEAT
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'auto-expire-subscriptions': {
+        'task': 'subscriptions.tasks.auto_expire_subscriptions',
+        'schedule': crontab(hour=0, minute=0),  # midnight daily
+    },
+    'send-renewal-reminders': {
+        'task': 'subscriptions.tasks.send_renewal_reminder_emails',
+        'schedule': crontab(hour=0, minute=0),  # midnight daily
+    },
+    'auto-renew-subscriptions': {
+        'task': 'subscriptions.tasks.auto_renewal_subscriptions',
+        'schedule': crontab(hour=0, minute=0),  # midnight daily
+    },
+}
+
 
 
 
