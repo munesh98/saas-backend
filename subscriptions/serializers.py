@@ -22,8 +22,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         start_date = date.today()
         end_date = start_date + timedelta(days=plan.duration_days)
         
-        if Subscription.objects.filter(user=user, status='ACTIVE').exists():
-            raise ValidationError("User already has an active subscription.")
+        if Subscription.objects.filter(user=user, status__in=['ACTIVE', 'PENDING']).exists():
+            raise ValidationError("User already has an active or pending subscription.")
         
         subscription = Subscription.objects.create(
             user=user,
