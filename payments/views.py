@@ -7,6 +7,17 @@ from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 from .models import Payment
 import uuid
+import razorpay
+from django.conf import settings
+from subscriptions.models import Subscription
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from rest_framework.permissions import AllowAny
+
+razorpay_client = razorpay.Client(
+    auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
+)
 
 
 class PaymentCreateAPIView(APIView):
@@ -87,6 +98,95 @@ class PaymentVerifyAPIView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+
+class RazorpayOrderCreateAPIView(APIView):
+    def post(self, request):
+        # get subscription_id from request
+        subscription_id = request.data.get('subscription_id')
+        
+        # fetch subscription
+        subscription = get_object_or_404(Subscription , id = subscription_id)
+        if subscription.user != request.user :
+            raise ValidationError("You cannot pay to other's subscription")
+        if subscription.status != "PENDING" :
+            raise ValidationError("You do not have any pending payments")
+        
+        # create razorpay order
+        amount = int(subscription.plan.price * 100)  # convert to paise 
+        razorpay_order = razorpay_client.order.create({
+            'amount': amount,
+            'currency': 'INR',
+            'payment_capture': 1  # auto capture payment
+            })
+        
+        # save razorpay order id to payment record
+        payment = get_object_or_404(Payment, subscription=subscription, status='PENDING')
+        payment.razorpay_order_id = razorpay_order['id']
+        payment.save()
+        
+        # return order details
+        return Response({
+            'order_id': razorpay_order['id'],
+            'amount': amount,
+            'currency': 'INR',
+            'key_id': settings.RAZORPAY_KEY_ID,
+            'subscription_id': subscription.id,
+            }, status=status.HTTP_201_CREATED)
+
+
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class RazorpayWebhookAPIView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        # get webhook payload
+        webhook_body = request.body
+        webhook_signature = request.headers.get('X-Razorpay-Signature')
+        
+        # verify signature
+        try:
+            razorpay_client.utility.verify_webhook_signature(
+                webhook_body.decode('utf-8'),
+                webhook_signature,
+                settings.RAZORPAY_KEY_SECRET
+            )
+        except Exception:
+            return Response(
+                {"error": "Invalid signature"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # parse payload
+        payload = json.loads(webhook_body)
+        
+        # only handle successful payments
+        if payload['event'] != 'payment.captured':
+            return Response({"message": "Event ignored"}, status=status.HTTP_200_OK)
+        
+        # get razorpay order id from payload
+        razorpay_order_id = payload['payload']['payment']['entity']['order_id']
+        
+        # find payment record
+        payment = get_object_or_404(Payment, razorpay_order_id=razorpay_order_id)
+        
+        # prevent reprocessing
+        if payment.status != 'PENDING':
+            return Response({"message": "Already processed"}, status=status.HTTP_200_OK)
+        
+        # update payment
+        payment.status = 'SUCCESS'
+        payment.transaction_id = payload['payload']['payment']['entity']['id']
+        payment.save()
+        
+        # update subscription
+        subscription = payment.subscription
+        subscription.status = 'ACTIVE'
+        subscription.save()
+        
+        return Response({"message": "Payment processed"}, status=status.HTTP_200_OK)            
 
 
 class PaymentList(APIView):
