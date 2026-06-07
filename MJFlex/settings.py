@@ -160,6 +160,8 @@ REST_FRAMEWORK = {
 }
 
 
+AUTH_USER_MODEL = 'accounts.CustomUser'
+
 
 # Celery settings
 REDIS_URL = os.environ.get('REDIS_URL')
