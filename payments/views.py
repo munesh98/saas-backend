@@ -14,12 +14,15 @@ import json
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.permissions import AllowAny
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 
 razorpay_client = razorpay.Client(
     auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
 )
 
 
+@extend_schema(request=PaymentSerializer, responses=PaymentSerializer)
 class PaymentCreateAPIView(APIView):
 
     def post(self, request):
@@ -44,7 +47,10 @@ class PaymentCreateAPIView(APIView):
 
 
 
-
+@extend_schema(
+    request={"type": "object", "properties": {"payment_id": {"type": "integer"}, "status": {"type": "string"}}},
+    responses={"200": {"description": "Payment verified successfully"}}
+)
 class PaymentVerifyAPIView(APIView):
 
     def post(self, request):
@@ -100,6 +106,10 @@ class PaymentVerifyAPIView(APIView):
         )
 
 
+@extend_schema(
+    request={"type": "object", "properties": {"subscription_id": {"type": "integer"}}},
+    responses={"201": {"description": "Razorpay order created"}}
+)
 class RazorpayOrderCreateAPIView(APIView):
     def post(self, request):
         # get subscription_id from request
@@ -136,7 +146,7 @@ class RazorpayOrderCreateAPIView(APIView):
 
 
 
-
+@extend_schema(exclude=True)
 @method_decorator(csrf_exempt, name='dispatch')
 class RazorpayWebhookAPIView(APIView):
     permission_classes = [AllowAny]
@@ -189,6 +199,7 @@ class RazorpayWebhookAPIView(APIView):
         return Response({"message": "Payment processed"}, status=status.HTTP_200_OK)            
 
 
+@extend_schema(responses=PaymentSerializer(many=True))
 class PaymentList(APIView):
 
     def get(self, request):
@@ -211,6 +222,7 @@ class PaymentList(APIView):
                         , status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={"200": {"description": "Current user info"}})
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
 

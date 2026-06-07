@@ -9,11 +9,26 @@ from .models import Subscription, Plan
 from django.http import HttpResponse
 from .tasks import send_subscription_confirmation_email
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema
 
 
 def home(request):
     return HttpResponse("Backend is live 🚀")
 
+
+@extend_schema(responses=PlanSerializer(many=True))
+class PlanList(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self,request):
+        plans = Plan.objects.all()
+        serializer = PlanSerializer(plans, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+@extend_schema(request=SubscriptionSerializer, responses=SubscriptionSerializer)
 class SubscriptionCreateAPIView(APIView):
 
     def post(self, request):
@@ -37,6 +52,7 @@ class SubscriptionCreateAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(responses=SubscriptionSerializer(many=True))
 class SubscriptionList(APIView):
 
     def get(self, request):
@@ -53,16 +69,10 @@ class SubscriptionList(APIView):
                         
  
 
-class PlanList(APIView):
-    permission_classes = [AllowAny]
-    
-    def get(self,request):
-        plans = Plan.objects.all()
-        serializer = PlanSerializer(plans, many=True)
-        
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+@extend_schema(
+    responses={"200": {"description": "Subscription cancelled successfully"}}
+)
 class SubscriptionCancelAPIView(APIView):
 
     def patch(self, request, subscription_id):

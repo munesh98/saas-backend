@@ -12,7 +12,10 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.exceptions import AuthenticationFailed
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 
+@extend_schema(request=RegisterSerializer, responses={"201": {"description": "User registered successfully"}})
 class RegisterationCreateAPIView(APIView):
     permission_classes = [AllowAny]  # override global IsAuthenticated
     
@@ -47,6 +50,7 @@ class RegisterationCreateAPIView(APIView):
         )
 
 
+@extend_schema(responses={"200": {"description": "Email verified successfully"}})
 class VerifyEmailView(APIView):
     permission_classes = [AllowAny]  # override global IsAuthenticated
     
@@ -74,6 +78,7 @@ class VerifyEmailView(APIView):
             status=status.HTTP_200_OK)
 
 
+@extend_schema(responses={"200": {"description": "Token obtained successfully"}})
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
@@ -92,7 +97,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         
         return response
 
-
+@extend_schema(
+    request={"application/json": {"type": "object", "properties": {"email": {"type": "string", "format": "email"}}}},
+    responses={"200": {"description": "Password reset link sent"}}
+)
 class PasswordResetView(APIView):
     permission_classes = [AllowAny]
     
@@ -120,6 +128,8 @@ class PasswordResetView(APIView):
             status=status.HTTP_200_OK
         )
 
+
+@extend_schema(request={"type": "object", "properties": {"token": {"type": "string"}, "new_password": {"type": "string"}, "confirm_password": {"type": "string"}}}, responses={"200": {"description": "Password reset successful"}})
 class PasswordUpdateView(APIView):
     permission_classes = [AllowAny]
     

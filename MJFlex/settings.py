@@ -37,7 +37,7 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "payments",
     'rest_framework',
     'django_celery_beat',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -156,8 +157,38 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-    ]
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',   # uses key 'anon'
+        'rest_framework.throttling.UserRateThrottle',   # uses key 'user'
+        ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/hour',    # rate for AnonRateThrottle
+        'user': '100/hour',   # rate for UserRateThrottle
+        }
+    }
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'MJFlex SaaS API',
+    'DESCRIPTION': 'Subscription-based SaaS backend with JWT authentication, payment processing, and async task management.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SECURITY': [{'BearerAuth': []}],
+    'COMPONENTS': {
+        'securitySchemes': {
+            'BearerAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+            }
+        }
+    },
 }
+
 
 
 AUTH_USER_MODEL = 'accounts.CustomUser'
