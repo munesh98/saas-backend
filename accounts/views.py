@@ -14,6 +14,8 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
+from django.contrib.auth import authenticate
+   
 
 @extend_schema(request=RegisterSerializer, responses={"201": {"description": "User registered successfully"}})
 class RegisterationCreateAPIView(APIView):
@@ -81,21 +83,21 @@ class VerifyEmailView(APIView):
 @extend_schema(responses={"200": {"description": "Token obtained successfully"}})
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        
-        # get the user
-        user = authenticate(
-            username=request.data.get('username'),
-            password=request.data.get('password')
-        )
-        
-        if user and not user.is_verified:
-            return Response(
+        User = get_user_model()
+    
+        try:
+            user = User.objects.get(username=request.data.get('username'))
+            if not user.is_verified:
+                return Response(
                 {"error": "Please verify your email before logging in."},
                 status=status.HTTP_403_FORBIDDEN
-            )
-        
-        return response
+                )
+        except User.DoesNotExist:
+            pass
+    
+        return super().post(request, *args, **kwargs)
+
+
 
 @extend_schema(
     request={"application/json": {"type": "object", "properties": {"email": {"type": "string", "format": "email"}}}},

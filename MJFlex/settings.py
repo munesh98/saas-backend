@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 import os
 from datetime import timedelta
 import ssl
+import sys
 
 load_dotenv()
 
@@ -40,6 +41,9 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+
+
 
 # Application definition
 
@@ -151,6 +155,11 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+
+
+# Override throttling for tests
+
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -170,6 +179,10 @@ REST_FRAMEWORK = {
         'user': '100/hour',   # rate for UserRateThrottle
         }
     }
+
+if 'test' in sys.argv:
+    REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
+    REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {}
 
 
 SPECTACULAR_SETTINGS = {
