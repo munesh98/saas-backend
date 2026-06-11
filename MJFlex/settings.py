@@ -183,7 +183,8 @@ REST_FRAMEWORK = {
 if 'test' in sys.argv:
     REST_FRAMEWORK['DEFAULT_THROTTLE_CLASSES'] = []
     REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {}
-
+    CELERY_TASK_ALWAYS_EAGER = True  # run celery tasks synchronously in tests
+    CELERY_TASK_EAGER_PROPAGATES = True
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'MJFlex SaaS API',
