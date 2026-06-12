@@ -1,1 +1,1 @@
-web: gunicorn MJFlex.wsgi
+web: gunicorn MJFlex.wsgi:application
