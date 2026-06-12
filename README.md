@@ -1,35 +1,63 @@
 # MJFlex — Subscription-based SaaS Backend
 
 A production-ready SaaS backend built with Django and Django REST Framework.
-Handles user authentication, subscription management, payment workflows,
-and async email notifications.
+Handles user authentication, subscription lifecycle management, payment 
+processing via Razorpay, automated email notifications, and background 
+task scheduling.
 
 ---
 
 ## Tech Stack
 
-- Python & Django
+- Python & Django 6
 - Django REST Framework
 - JWT Authentication (djangorestframework-simplejwt)
-- Celery + Redis (async task processing)
+- Celery + Redis (async task processing & scheduling)
+- Razorpay (payment gateway)
 - PostgreSQL (production) / SQLite (local)
 - Gunicorn
-- Render (deployment)
+- drf-spectacular (API documentation)
 
 ---
 
 ## Features
 
+**Authentication**
+- Custom User model with email verification
 - JWT authentication — register, login, token refresh
-- Plan management — admin can create and manage plans
-- Subscription creation and tracking
-- One active subscription per user enforced
-- Payment flow linked to subscription
+- Email verification required before login
+- Password reset via email link
+- Unverified users blocked at login
+
+**Subscription Management**
+- Plan listing — public endpoint
+- Subscription creation with automatic date calculation
+- One active/pending subscription per user enforced
+- Subscription cancellation — access retained until billing period ends
+- Auto renewal logic via Celery Beat
+- Auto expiry of subscriptions at end date
+
+**Payment Processing**
+- Payment creation linked to subscription
+- Razorpay order creation
+- Webhook endpoint for payment confirmation
 - Payment amount derived from plan — no client-side manipulation
-- User-level access control — users can only manage their own data
+- User-level access control — users can only manage their own payments
 - Duplicate payment prevention
-- Async email notifications via Celery and Redis — confirmation
-  email sent on subscription creation without blocking the API response
+
+**Async Task Processing (Celery + Redis)**
+- Subscription confirmation email on creation
+- Renewal reminder email 24 hours before expiry
+- Auto renewal of subscriptions via Celery Beat
+- Auto expiry of subscriptions via Celery Beat
+- Password reset email
+- Email verification email
+
+**API Quality**
+- Swagger UI documentation — /api/docs/
+- Pagination on list endpoints
+- Rate limiting — 20 req/hour anonymous, 100 req/hour authenticated
+- 19 automated tests — accounts, subscriptions, payments
 
 ---
 
@@ -39,54 +67,43 @@ and async email notifications.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /api/register/ | Register new user |
+| GET | /api/verify-email/ | Verify email address |
 | POST | /api/token/ | Login — returns access & refresh tokens |
 | POST | /api/token/refresh/ | Refresh access token |
+| POST | /api/password-reset-email/ | Request password reset link |
+| POST | /api/password-update/ | Reset password with token |
+
+### Plans
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | /api/plans/ | List all available plans (public) |
 
 ### Subscriptions
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /api/subscriptions/ | Create a subscription |
 | GET | /api/subscriptions/list/ | List user's subscriptions |
+| PATCH | /api/subscriptions/{id}/cancel/ | Cancel a subscription |
 
 ### Payments
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | /api/payments/ | Create a payment |
-| POST | /api/payments/verify/ | Verify and update payment status |
+| POST | /api/payments/create-order/ | Create Razorpay order |
+| POST | /api/payments/verify/ | Manual payment verification |
+| POST | /api/payments/webhook/ | Razorpay webhook endpoint |
 | GET | /api/payments/list/ | List user's payments |
 | GET | /api/me/ | Get current user info |
 
 ---
 
-## Core Business Logic
+## Celery Beat Schedule
 
-- User must register and authenticate via JWT before accessing any endpoint
-- A user can have only one active subscription at a time
-- Payment is always linked to a subscription
-- Payment amount is derived from the selected plan automatically
-- Users cannot pay for another user's subscription
-- Duplicate pending payments are prevented
-- On successful payment, subscription status updates to ACTIVE automatically
-- Subscription confirmation email is sent asynchronously via Celery + Redis
+All tasks run daily at midnight:
 
----
-
-## Async Task Processing
-
-Celery and Redis handle background tasks so API responses are never blocked:
-
-- **Subscription confirmation email** — triggered automatically when a
-  subscription is created, processed in the background by the Celery worker
-
----
-
-## Database Models
-
-**Plan** — name, code, price, duration_days, description
-
-**Subscription** — user, plan, start_date, end_date, status, auto_renew
-
-**Payment** — user, subscription, amount, status, transaction_id, created_at
+- `auto_expire_subscriptions` — expires/cancels subscriptions past end date
+- `send_renewal_reminder_emails` — sends reminder 24hrs before expiry
+- `auto_renewal_subscriptions` — auto renews subscriptions with auto_renew=True
 
 ---
 
@@ -100,20 +117,44 @@ venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env  # add your environment variables
 python manage.py migrate
+python manage.py createsuperuser
 python manage.py runserver
 ```
 
-Start the Celery worker (separate terminal):
+Start Celery worker (separate terminal):
 ```bash
 celery -A MJFlex worker --loglevel=info --pool=solo
 ```
 
+Start Celery Beat scheduler (separate terminal):
+```bash
+celery -A MJFlex beat --loglevel=info
+```
+
+---
+
+## Running Tests
+
+```bash
+python manage.py test
+```
+
+19 tests covering authentication, subscription management, and payment flows.
+
+---
+
+## API Documentation
+
+Swagger UI available at `/api/docs/` when running locally.
+
 ---
 
 ## Environment Variables
-SECRET_KEY=your-secret-key 
-DATABASE_URL=your-database-url 
+SECRET_KEY=your-secret-key
+DATABASE_URL=your-database-url
 REDIS_URL=your-redis-url
+RAZORPAY_KEY_ID=your-razorpay-key-id
+RAZORPAY_KEY_SECRET=your-razorpay-key-secret
 
 ---
 
