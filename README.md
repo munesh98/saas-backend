@@ -20,6 +20,16 @@ task scheduling.
 
 ---
 
+## Live Demo
+
+**API Base URL:** https://mjflex-backend.onrender.com
+
+**Swagger UI:** https://mjflex-backend.onrender.com/api/docs/
+
+**Plans endpoint (public):** https://mjflex-backend.onrender.com/api/plans/
+
+---
+
 ## Features
 
 **Authentication**
@@ -145,7 +155,9 @@ python manage.py test
 
 ## API Documentation
 
-Swagger UI available at `/api/docs/` when running locally.
+Swagger UI available at:
+- **Local:** http://127.0.0.1:8000/api/docs/
+- **Production:** https://mjflex-backend.onrender.com/api/docs/
 
 ---
 
